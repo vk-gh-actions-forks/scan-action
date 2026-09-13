@@ -1,11 +1,12 @@
 # GitHub Action for Vulnerability Scanning
 
+**:zap: _Find threats in files or containers at lightning speed_ :zap:**
+
 [![Test Status][test-img]][test]
 [![GitHub release](https://img.shields.io/github/release/anchore/scan-action.svg)](https://github.com/anchore/scan-action/releases/latest)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/anchore/scan-action/blob/main/LICENSE)
-[![Slack Invite](https://img.shields.io/badge/Slack-Join-blue?logo=slack)](https://anchore.com/slack)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/anchore/scan-action/blob/main/LICENSE)
+[![Join our Discourse](https://img.shields.io/badge/Discourse-Join-blue?logo=discourse)](https://anchore.com/discourse)
 
-:zap: _Find threats in files or containers at lightning speed_ :zap:
 
 This is a GitHub Action for invoking the [Grype](https://github.com/anchore/grype) scanner and returning the vulnerabilities found,
 and optionally fail if a vulnerability is found with a configurable severity level.
@@ -38,23 +39,26 @@ Supported packages and libraries:
 - Java JAR/EAR/WAR, Jenkins plugins JPI/HPI
 - Go modules
 
+> [!TIP]
+> **Security best practice**: For production workflows, pin actions to a full commit SHA rather than a version tag. You can find the latest SHA for each release on the action's [releases page](https://github.com/anchore/scan-action/releases).
+
 ## Container scanning
 
 The simplest workflow for scanning a `localbuild/testimage` container:
 
 ```yaml
 - name: Set up Docker Buildx
-  uses: docker/setup-buildx-action@v1
+  uses: docker/setup-buildx-action@v3
 
 - name: build local container
-  uses: docker/build-push-action@v2
+  uses: docker/build-push-action@v6
   with:
     tags: localbuild/testimage:latest
     push: false
     load: true
 
 - name: Scan image
-  uses: anchore/scan-action@v3
+  uses: anchore/scan-action@v7
   with:
     image: "localbuild/testimage:latest"
 ```
@@ -65,7 +69,7 @@ To scan a directory, add the following step:
 
 ```yaml
 - name: Scan current project
-  uses: anchore/scan-action@v3
+  uses: anchore/scan-action@v7
   with:
     path: "."
 ```
@@ -84,7 +88,7 @@ Use the `sbom` key to scan an SBOM file:
     output-file: "${{ github.event.repository.name }}-sbom.spdx.json"
 
 - name: Scan SBOM
-  uses: anchore/scan-action@v3
+  uses: anchore/scan-action@v7
   with:
     sbom: "${{ github.event.repository.name }}-sbom.spdx.json"
 ```
@@ -97,7 +101,7 @@ With a different severity level:
 
 ```yaml
 - name: Scan image
-  uses: anchore/scan-action@v3
+  uses: anchore/scan-action@v7
   with:
     image: "localbuild/testimage:latest"
     fail-build: true
@@ -108,7 +112,7 @@ Optionally, change the `fail-build` field to `false` to avoid failing the build 
 
 ```yaml
 - name: Scan image
-  uses: anchore/scan-action@v3
+  uses: anchore/scan-action@v7
   with:
     image: "localbuild/testimage:latest"
     fail-build: false
@@ -119,24 +123,32 @@ Optionally, change the `fail-build` field to `false` to avoid failing the build 
 The inputs `image`, `path`, and `sbom` are mutually exclusive to specify the source to scan; all the other keys are optional. These are all the available keys to configure this action, along with the defaults:
 
 | Input Name          | Description                                                                                                                                                                                                                                                      | Default Value |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+|---------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
 | `image`             | The image to scan                                                                                                                                                                                                                                                | N/A           |
 | `path`              | The file path to scan                                                                                                                                                                                                                                            | N/A           |
 | `sbom`              | The SBOM to scan                                                                                                                                                                                                                                                 | N/A           |
 | `registry-username` | The registry username to use when authenticating to an external registry                                                                                                                                                                                         |               |
 | `registry-password` | The registry password to use when authenticating to an external registry                                                                                                                                                                                         |               |
 | `fail-build`        | Fail the build if a vulnerability is found with a higher severity. That severity defaults to `medium` and can be set with `severity-cutoff`.                                                                                                                     | `true`        |
-| `output-format`     | Set the output parameter after successful action execution. Valid choices are `json`, `sarif`, and `table`, where `table` output will print to the console instead of generating a file.                                                                         | `sarif`       |
+| `output-format`     | Set the output parameter after successful action execution. Valid choices are `json`, `sarif`, `cyclonedx-xml`, `cyclonedx-json`, and `table`; where `table` output will also display in the logs.                                                               | `sarif`       |
+| `output-file`       | File to output the Grype scan results to. Defaults to a file in the system temp directory, available in the action outputs                                                                                                                                       |               |
 | `severity-cutoff`   | Optionally specify the minimum vulnerability severity to trigger a failure. Valid choices are "negligible", "low", "medium", "high" and "critical". Any vulnerability with a severity less than this value will lead to a "warning" result. Default is "medium". | `medium`      |
 | `only-fixed`        | Specify whether to only report vulnerabilities that have a fix available.                                                                                                                                                                                        | `false`       |
 | `add-cpes-if-none`  | Specify whether to autogenerate missing CPEs.                                                                                                                                                                                                                    | `false`       |
+| `by-cve`            | Specify whether to orient results by CVE rather than GHSA.                                                                                                                                                                                                       | `false`       |
+| `vex`               | Specify a list of VEX documents to consider when producing scanning results.                                                                                                                                                                                     | `false`       |
+| `cache-db`          | Cache the Grype DB in GitHub action cache and restore before checking for updates                                                                                                                                                                                | `false`       |
+| `grype-version`     | An optional Grype version to download, defaults to the pinned version in [GrypeVersion.js](GrypeVersion.js).                                                                                                                                                     |               |
+| `config`            | Optional Grype configuration files (newline-separated). Setting this will disable auto-detection of configuration files (e.g. .grype.yaml) - only the specified files will be loaded..                                                                           |               |
 
 ### Action Outputs
 
-| Output Name | Description                                                  | Type   |
-| ----------- | ------------------------------------------------------------ | ------ |
-| `sarif`     | Path to the SARIF report file, if `output-format` is `sarif` | string |
-| `json`      | Path to the report file , if `output-format` is `json`       | string |
+| Output Name      | Description                                                                    | Type   |
+|------------------|--------------------------------------------------------------------------------|--------|
+| `sarif`          | Path to the SARIF report file, if `output-format` is `sarif`                   | string |
+| `json`           | Path to the report file , if `output-format` is `json`                         | string |
+| `cyclonedx-xml`  | Path to the CycloneDX report file, if `output-format` is `cyclonedx`           | string |
+| `cyclonedx-json` | Path to the CycloneDX JSON report file, if `output-format` is `cyclonedx-json` | string |
 
 ### Example Workflows
 
@@ -149,10 +161,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Build the container image
         run: docker build . --file Dockerfile --tag localbuild/testimage:latest
-      - uses: anchore/scan-action@v3
+      - uses: anchore/scan-action@v7
         with:
           image: "localbuild/testimage:latest"
           fail-build: true
@@ -168,16 +180,20 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Permissions key is required for CodeQL SARIF Upload, per the docs:
+    # https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github
+    permissions:
+      security-events: write
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Build the Container image
         run: docker build . --file Dockerfile --tag localbuild/testimage:latest
-      - uses: anchore/scan-action@v3
+      - uses: anchore/scan-action@v7
         id: scan
         with:
           image: "localbuild/testimage:latest"
       - name: upload Anchore scan SARIF report
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}
 ```
@@ -197,13 +213,14 @@ such as [ignoring certain matches](https://github.com/anchore/grype#specifying-m
 
 ## anchore/scan-action/download-grype
 
-A sub-action to [download Grype](download-grype/action.yml).
+A sub-action to [download Grype](download-grype/action.yml) and optionally cache the Grype DB.
 
 Input parameters:
 
 | Parameter       | Description                                                                                                  | Default |
-| --------------- | ------------------------------------------------------------------------------------------------------------ | ------- |
+|-----------------|--------------------------------------------------------------------------------------------------------------|---------|
 | `grype-version` | An optional Grype version to download, defaults to the pinned version in [GrypeVersion.js](GrypeVersion.js). |         |
+| `cache-db`      | Cache the Grype DB in GitHub action cache and restore before checking for updates                            | `false` |
 
 Output parameters:
 
@@ -232,7 +249,7 @@ For contributing, see [Contributing](CONTRIBUTING.md).
 
 For documentation on Grype itself, including other output capabilities, see the [grype project](https://github.com/anchore/grype)
 
-Connect with the community directly on [slack](https://anchore.com/slack).
+Connect with the community directly on [Discourse](https://anchore.com/discourse).
 
 [test]: https://github.com/anchore/scan-action
 [test-img]: https://github.com/anchore/scan-action/workflows/Tests/badge.svg
